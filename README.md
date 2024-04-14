@@ -1,34 +1,60 @@
 # AAC-Clydespace Avionics Software Challenge
-You are given the LIS3MDLTR 3-Axis Magnetometer sensor. The data sheet is
-located at `doc/lism3mdl.pdf`
 
 ## Task Description
-You must use the C API defined in `i2c.h` to operate on an I2C bus.
-
-We provide example stub implementations of this API in `i2c.c`. You are free to
-extend the provided stub functions for the API.
-
 Please write a device driver that implements the following API:
 - Get the full-scale configuration
+CTRL_REG2 (21h)
+Keeping default values for Reboot bit and Soft_reset bit we get following hex values for different configurations:
+CONFIG_4GAUSS        0x00
+CONFIG_8GAUSS        0x20
+CONFIG_12GAUSS       0x40
+CONFIG_16GAUSS       0x60
+These respectives values can help user to determine what full scale configuration they are on currently.
+
 - Get and set the output data rate
+In case of output data rate this data developer can find on CTRL_REG1
+Since we are not using data from temperature sensor and selftest feature we keep default values for TEMP_EN and ST bits.
+Developer must take a note that when using FAST_ODR i.e. fast data rates (155hz - 1000hz) FAST_ODR bit is SET, otherwise
+it should be LOW. 
+Below are different data rates mentioned and their corresponding hex input to the registers.
+0.625HZ             0x00
+1.25HZ              0x04
+2.5HZ               0x08
+5HZ                 0x0C
+10HZ                0x10
+20HZ                0x14
+40HZ                0x18
+80HZ                0x1C
+155HZ              0x10
+300HZ              0x14
+560HZ              0x18
+1000HZ             0x1C
+
 - Enable or disable the interrupt pin
+This can be achieved by changing the value of IEN bit in the INT_CFG (30h) Register.
+
 - Read the output data of a specified axis
+Data for all this axis can be read from registers: 
+OUT_X_L (28h), OUT_X_H (29h) for X-axis
+OUT_Y_L (2Ah), OUT_Y_H (2Bh) for Y-axis and 
+OUT_Z_L (2Ch), OUT_Z_H (2Dh)
 
-## Development
-You are provided this minimal repository, `aac-code-challenge`, please perform
-your work on branch `<candidate_name>`
+Since the data for all three axis is on 2 different registers. We will be storing this data in an uint8_t array of 2 elements
+and later by shifting the bits by 8 places and ORing the 2 element. We can easily store it in a uint16_t type variable.
 
-Documentation can be found in `aac-code-challenge/doc`
 
-Once complete, please repackage and email back this repo to your interviewers
-
-## Scope
-You shouldn't need to spend more than a couple of hours on the task.
-
-This is not a closed book assessment.
 
 ## Extra Thoughts
 If you have time, answer the following questions:
 - What changes you would make to this interfaces for use in an RTOS
 environment?
+=> Some of the changes that we can make to the interface for better integration with an RTOS are: adding Callback mechnanisms, 
+this will allow the application to continue executing other tasks while waiting for the i2c to finish execution.
+Implemenation of mutexes and semaphores this will give us exclusive access to shared resources and help us manage these resources better. 
+Error handling capablities, these gives us better error code or notifications in case of errors and help us continue to take appropriate 
+actions in case of the errors. Other than these we could also keep priorities to the tasks which are of greater importance.
+
 - How might the I2C API be improved
+=> We do have a lot of scope to improve in this I2C API.
+Features like Error reporting which can help us troubleshoot the problems and implementing features like timeout mechanisms to prevent 
+indefinite blocking in case of communication issues. 
